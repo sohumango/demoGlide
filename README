@@ -1,0 +1,61 @@
+ref: https://qiita.com/ryugoo/items/df3ff453897379cc1bd0
+ref: http://bumptech.github.io/glide/doc/migrating.html
+
+
+1. 
+
+    api 'com.github.bumptech.glide:glide:4.5.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.5.0'
+
+    api 'com.github.bumptech.glide:okhttp3-integration:4.5.0'
+    api 'com.github.bumptech.glide:recyclerview-integration:4.0.0-RC0@aar'
+
+2. 
+    @GlideModule
+    public class MyOkHttp3GlideModule extends AppGlideModule {
+
+        @Override
+        public void applyOptions(Context context, GlideBuilder builder) {
+            int memoryCacheSizeBytes = 1024 * 1024 * 20; // 20mb
+            builder.setMemoryCache(new LruResourceCache(memoryCacheSizeBytes));
+            builder.setDiskCache(new InternalCacheDiskCacheFactory(context, memoryCacheSizeBytes));
+            builder.setDefaultRequestOptions(requestOptions(context));
+            builder.build(context);
+        }
+
+        @Override
+        public void registerComponents(@NonNull Context context, @NonNull Glide glide, @NonNull Registry registry) {
+            OkHttpClient client = new OkHttpClient.Builder()
+                    .readTimeout(20, TimeUnit.SECONDS)
+                    .connectTimeout(20, TimeUnit.SECONDS)
+                    .build();
+            OkHttpUrlLoader.Factory factory = new OkHttpUrlLoader.Factory(client);
+            glide.getRegistry().replace(GlideUrl.class, InputStream.class, factory);
+        }
+
+        private static RequestOptions requestOptions(Context context){
+            return new RequestOptions()
+                    .signature(new ObjectKey(
+                            System.currentTimeMillis() / (24 * 60 * 60 * 1000)))
+                    .override(200, 200)
+                    .centerCrop()
+                    .encodeFormat(Bitmap.CompressFormat.PNG)
+                    .encodeQuality(100)
+                    .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
+                    .format(PREFER_ARGB_8888)
+                    .skipMemoryCache(false);
+        }
+    }
+
+3.
+    <uses-permission android:name="android.permission.INTERNET"></uses-permission>
+
+
+4.
+        @Override
+        public void onClick(View v) {
+            ImageView iv = this.findViewById(R.id.image01);
+            GlideApp.with(iv)
+                    .load(url)
+                    .into(iv);/* Target ImageView */
+        }
